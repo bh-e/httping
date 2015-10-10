@@ -5,7 +5,7 @@ httping (2.4-1) unstable; urgency=low
   * debian/patches
    + manpage fixes hyphen-used-as-minus-sign 
   * Copyright corrections to meet debian copyright standard
-  * Removed 'Replaces:http-nossl' from control 
+  * Removed 'Replaces http-nossl' from control 
 
  -- Abhijith PA <abhijith@openmailbox.org>  Thu, 08 Oct 2015 19:15:42 +0530
 
