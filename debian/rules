@@ -12,4 +12,4 @@ override_dh_auto_install:
 	rm $(CURDIR)/debian/httping/usr/share/doc/httping/license.OpenSSL
 
 override_dh_auto_configure:
-        ./configure --with-tfo --with-ncurses --with-openssl --with-fftw3
+	./configure --with-tfo --with-ncurses --with-openssl --with-fftw3
