@@ -2,7 +2,10 @@ httping (2.5-1) unstable; urgency=low
 
   * New upstream release
   * Build with TFO,ncurses,openssl,fftw3 support (Closes: #828048)
-  * Bumps Standards-Version to 3.9.8  
+  * Bumps Standards-Version to 3.9.8 
+  * Remove dpkg-dev from Build-Depends
+  * Fix Vcs-Git URI 
+  * Remove patches/hyphen.patch . Lintian is happy 
 
  -- Abhijith PA <abhijith@openmailbox.org>  Mon, 12 Sep 2016 15:13:29 +0530
 
