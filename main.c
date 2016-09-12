@@ -1,5 +1,4 @@
-/* Released under GPLv2 with exception for the OpenSSL library. See license.txt */
-/* $Revision: 278 $ */
+/* Released under AGPL v3 with exception for the OpenSSL library. See license.txt */
 
 #define _GNU_SOURCE
 #include <sys/ioctl.h>
@@ -639,7 +638,7 @@ time_t parse_date_from_response_headers(const char *in)
 		struct tm tm;
 		memset(&tm, 0x00, sizeof tm);
 
-		/* 22 Feb 2013 09:13:56 */
+		/* 22 Feb 2015 09:13:56 */
 		if (strptime(komma + 1, "%d %b %Y %H:%M:%S %Z", &tm))
 			return mktime(&tm);
 	}
@@ -660,7 +659,7 @@ int calc_page_age(const char *in, const time_t their_ts)
 			struct tm tm;
 			memset(&tm, 0x00, sizeof tm);
 
-			/* 22 Feb 2013 09:13:56 */
+			/* 22 Feb 2015 09:13:56 */
 			if (strptime(komma + 1, "%d %b %Y %H:%M:%S %Z", &tm))
 				age = their_ts - mktime(&tm);
 		}
@@ -1036,8 +1035,8 @@ int main(int argc, char *argv[])
 	bps.Bps_avg = 0;
 
 	setlocale(LC_ALL, "");
-	bindtextdomain("HTTPing", LOCALEDIR);
-	textdomain("HTTPing");
+	bindtextdomain("httping", LOCALEDIR);
+	textdomain("httping");
 
 	init_statst(&t_resolve);
 	init_statst(&t_connect);
@@ -1415,9 +1414,6 @@ int main(int argc, char *argv[])
 	if (!(get_instead_of_head || use_ssl) && show_Bps)
 		error_exit(gettext("-b/-B can only be used when also using -G (GET instead of HEAD) or -l (use SSL)\n"));
 
-	if (use_tfo && use_ssl)
-		error_exit(gettext("TCP Fast open and SSL not supported together\n"));
-
 	if (colors)
 		set_colors(ncurses_mode);
 
@@ -1446,15 +1442,18 @@ int main(int argc, char *argv[])
 #ifdef NC
 		if (ncurses_mode)
 		{
-			slow_log(gettext("\nAuto enabling SSL due to https-URL"));
+			slow_log(gettext("\nAuto enabling SSL due to https-URL\n"));
 			update_terminal();
 		}
 		else
 #endif
 		{
-			fprintf(stderr, gettext("Auto enabling SSL due to https-URL"));
+			fprintf(stderr, gettext("Auto enabling SSL due to https-URL\n"));
 		}
 	}
+
+	if (use_tfo && use_ssl)
+		error_exit(gettext("TCP Fast open and SSL not supported together\n"));
 
 	if (verbose)
 	{
@@ -1751,7 +1750,7 @@ persistent_loop:
 			if (fd >= 0)
 			{
 				/* set fd blocking */
-				if (set_fd_blocking(fd) == -1)
+				if (set_fd_blocking(fd) == -1) /* FIXME redundant? already in connect_to etc? */
 				{
 					stats_close(&fd, &t_close, 1);
 					break;
@@ -1806,7 +1805,7 @@ persistent_loop:
 
 #ifndef NO_SSL
 			if (use_ssl)
-				rc = WRITE_SSL(ssl_h, request, req_len);
+				rc = WRITE_SSL(ssl_h, request, req_len, timeout);
 			else
 #endif
 			{
@@ -1820,6 +1819,7 @@ persistent_loop:
 			   e.g. until the transmitbuffers are empty and the data was
 			   sent to the next hop
 			 */
+#ifndef __CYGWIN__
 			for(;;)
 			{
 				int bytes_left = 0;
@@ -1838,6 +1838,7 @@ persistent_loop:
 				 */
 				usleep(write_sleep);
 			}
+#endif
 
 			dafter_write_complete = get_ts();
 

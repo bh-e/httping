@@ -11,7 +11,6 @@
 # do not wish to do so, delete this exception statement from your
 # version.  If you delete this exception statement from all source
 # files in the program, then also delete it here.
-# $Revision: 278 $
 
 -include makefile.inc
 
@@ -56,12 +55,13 @@ MKDIR=/bin/mkdir
 ARCHIVE=/bin/tar cf -
 COMPRESS=/bin/gzip -9
 
-TRANSLATIONS=nl.mo
+TRANSLATIONS=nl.mo ru.mo
 
 OBJS=gen.o http.o io.o error.o utils.o main.o tcp.o res.o socks5.o kalman.o cookies.o help.o colors.o
 
 MAN_EN=httping.1
 MAN_NL=httping-nl.1
+MAN_RU=httping-ru.1
 
 DOCS=license.txt license.OpenSSL readme.txt
 
@@ -111,6 +111,8 @@ install: $(TARGET) $(TRANSLATIONS)
 	$(INSTALLMAN) $(MAN_EN) $(DESTDIR)/$(MANDIR)/man1
 	$(INSTALLDIR) $(DESTDIR)/$(MANDIR)/nl/man1
 	$(INSTALLMAN) $(MAN_NL) $(DESTDIR)/$(MANDIR)/nl/man1
+	$(INSTALLDIR) $(DESTDIR)/$(MANDIR)/ru/man1
+	$(INSTALLMAN) $(MAN_RU) $(DESTDIR)/$(MANDIR)/ru/man1
 	$(INSTALLDIR) $(DESTDIR)/$(DOCDIR)
 	$(INSTALLDOC) $(DOCS) $(DESTDIR)/$(DOCDIR)
 ifneq ($(DEBUG),yes)
@@ -118,12 +120,18 @@ ifneq ($(DEBUG),yes)
 endif
 	mkdir -p $(DESTDIR)/$(PREFIX)/share/locale/nl/LC_MESSAGES
 	cp nl.mo $(DESTDIR)/$(PREFIX)/share/locale/nl/LC_MESSAGES/httping.mo
+	mkdir -p $(DESTDIR)/$(PREFIX)/share/locale/ru/LC_MESSAGES
+	cp ru.mo $(DESTDIR)/$(PREFIX)/share/locale/ru/LC_MESSAGES/httping.mo
+
 
 makefile.inc:
 	./configure
 
 nl.mo: nl.po
 	msgfmt -o nl.mo nl.po
+ru.mo: ru.po
+	msgfmt -o ru.mo ru.po
+
 
 clean:
 	$(RMDIR) $(OBJS) $(TARGET) *~ core cov-int *.mo
@@ -135,7 +143,7 @@ package:
 	# source package
 	$(RMDIR) $(PACKAGE)*
 	$(MKDIR) $(PACKAGE)
-	$(INSTALLDOC) *.c *.h configure Makefile *.po version $(MAN_EN) $(MAN_NL) $(DOCS) $(PACKAGE)
+	$(INSTALLDOC) *.c *.h configure Makefile *.po version $(MAN_EN) $(MAN_NL) $(MAN_RU) $(DOCS) $(PACKAGE)
 	$(INSTALLBIN) configure $(PACKAGE)
 	$(ARCHIVE) $(PACKAGE) | $(COMPRESS) > $(PACKAGE).tgz
 	$(RMDIR) $(PACKAGE)
