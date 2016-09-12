@@ -1,5 +1,4 @@
-/* Released under GPLv2 with exception for the OpenSSL library. See license.txt */
-/* $Revision$ */
+/* Released under AGPL v3 with exception for the OpenSSL library. See license.txt */
 
 #define incopy(a)       *((struct in_addr *)a)
 

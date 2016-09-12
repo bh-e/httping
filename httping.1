@@ -1,11 +1,11 @@
-.\" Copyright Folkert van Heusden, 2003-2013
+.\" Copyright Folkert van Heusden, 2003-2016
 .\"
 .\" This file may be copied under the conditions described
 .\" in the GNU GENERAL PUBLIC LICENSE, version 2
 .\" that can be found on the website of the free software
 .\" foundation.
 .\"
-.TH HTTPING 1 2013-07 "httping"
+.TH HTTPING 1 2016-09 "httping"
 .SH NAME
 httping - measure the latency and throughput of a webserver
 .SH SYNOPSIS
@@ -98,6 +98,9 @@ Be quiet, only return an exit-code.
 .TP
 .B "\-R str"
 Referer-string to send to the webserver.
+.TP
+.B "\-Q"
+Use a persistent connection, i.e. reuse the same TCP connection for multiple HTTP requests. Usually possible when 'Connection: Keep-Alive' is sent by server. Adds a 'C' to the output if httping had to reconnect.
 .TP
 .B "\-r"
 Only resolve the hostname once: this takes the resolving out of the loop so that the latency of the DNS is not measured. Also useful when you want to measure only 1 webserver while the DNS returns a different ip-address for each resolve ('roundrobin').
@@ -240,6 +243,6 @@ None. This program is totally bug-free.
 This page describes
 .B httping
 as found in the httping-2.3 package; other versions may differ slightly.
-Please mail corrections and additions to folkert@vanheusden.com.
-Report bugs in the program to folkert@vanheusden.com.
+Please mail corrections and additions to mail@vanheusden.com.
+Report bugs in the program to mail@vanheusden.com.
 Please consider sending bitcoins to 1N5Sn4jny4xVwTwSYLnf7WnFQEGoVRmTQF

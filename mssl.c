@@ -1,6 +1,4 @@
-/* Released under GPLv2 with exception for the OpenSSL library. See license.txt */
-/* $Revision$ */
-
+/* Released under AGPL v3 with exception for the OpenSSL library. See license.txt */
 #include <errno.h>
 #include <libintl.h>
 #include <string.h>
@@ -26,6 +24,7 @@
 #include "io.h"
 #include "http.h"
 #include "utils.h"
+#include "main.h"
 
 BIO *bio_err = NULL;
 
@@ -42,7 +41,7 @@ void shutdown_ssl(void)
 	CRYPTO_cleanup_all_ex_data();
 }
 
-char close_ssl_connection(SSL *ssl_h)
+int close_ssl_connection(SSL *const ssl_h)
 {
 	int rc = SSL_shutdown(ssl_h);
 
@@ -63,72 +62,133 @@ do any harm
 	return 0;
 }
 
-int READ_SSL(SSL *ssl_h, char *whereto, int len)
+int READ_SSL(SSL *const ssl_h, char *whereto, int len, const double timeout)
 {
-	int cnt=len;
+	const int cnt = len;
+	const int fd = SSL_get_rfd(ssl_h);
+	double end = get_ts() + timeout;
 
-	while(len>0)
+	while(len > 0 && !got_sigquit)
 	{
-		int rc;
+		int rc = -1;
+		fd_set rfds, wfds;
+		struct timeval tv;
+		double now = get_ts(), left = end - now;
+
+		if (left <= 0.0)
+		{
+			set_error(gettext("Time-out on SSL connection"));
+			return -1;
+		}
+
+		FD_ZERO(&rfds);
+		FD_SET(fd, &rfds);
+		FD_ZERO(&wfds); /* yes, see openssl */
+		FD_SET(fd, &wfds);
+
+		tv.tv_sec = left;
+		tv.tv_usec = (left - tv.tv_sec) * 1000000;
+
+		rc = select(fd + 1, &rfds, &wfds, NULL, &tv);
+
+		if (rc == -1)
+		{
+			if (errno != EINTR && errno != EAGAIN)
+				set_error(gettext("READ_SSL: io-error: %s"), strerror(errno));
+
+			return -1;
+		}
+
+		if (rc == 0)
+		{
+			set_error(gettext("Time-out on SSL connection (READ)"));
+			return -1;
+		}
 
 		rc = SSL_read(ssl_h, whereto, len);
 		if (rc == -1)
 		{
 			if (errno != EINTR && errno != EAGAIN)
-			{
 				set_error(gettext("READ_SSL: io-error: %s"), strerror(errno));
-				return -1;
-			}
+
+			return -1;
 		}
-		else if (rc == 0)
-		{
+
+		if (rc == 0)
 			return 0;
-		}
-		else
-		{
-			whereto += rc;
-			len -= rc;
-		}
+
+		whereto += rc;
+		len -= rc;
 	}
 
 	return cnt;
 }
 
-int WRITE_SSL(SSL *ssl_h, const char *wherefrom, int len)
+int WRITE_SSL(SSL *const ssl_h, const char *wherefrom, int len, const double timeout)
 {
-	int cnt=len;
+	const int cnt = len;
+	const int fd = SSL_get_wfd(ssl_h);
+	double end = get_ts() + timeout;
 
-	while(len>0)
+	while(len > 0 && !got_sigquit)
 	{
-		int rc;
+		int rc = -1;
+		fd_set rfds, wfds;
+		struct timeval tv;
+		double now = get_ts(), left = end - now;
+
+		if (left <= 0.0)
+		{
+			set_error(gettext("Time-out on SSL connection"));
+			return -1;
+		}
+
+		FD_ZERO(&rfds); /* yes, that's correct */
+		FD_SET(fd, &rfds);
+		FD_ZERO(&wfds);
+		FD_SET(fd, &wfds);
+
+		tv.tv_sec = left;
+		tv.tv_usec = (left - tv.tv_sec) * 1000000;
+
+		rc = select(fd + 1, &rfds, &wfds, NULL, &tv);
+
+		if (rc == -1)
+		{
+			if (errno != EINTR && errno != EAGAIN)
+				set_error(gettext("WRITE_SSL: io-error: %s"), strerror(errno));
+
+			return -1;
+		}
+
+		if (rc == 0)
+		{
+			set_error(gettext("Time-out on SSL connection (write)"));
+			return -1;
+		}
 
 		rc = SSL_write(ssl_h, wherefrom, len);
 		if (rc == -1)
 		{
 			if (errno != EINTR && errno != EAGAIN)
-			{
 				set_error(gettext("WRITE_SSL: io-error: %s"), strerror(errno));
-				return -1;
-			}
+			return -1;
 		}
-		else if (rc == 0)
-		{
+
+		if (rc == 0)
 			return 0;
-		}
-		else
-		{
-			wherefrom += rc;
-			len -= rc;
-		}
+
+		wherefrom += rc;
+		len -= rc;
 	}
 
 	return cnt;
 }
 
-int connect_ssl(int fd, SSL_CTX *client_ctx, SSL **ssl_h, BIO **s_bio, double timeout, double *ssl_handshake)
+int connect_ssl(const int fd, SSL_CTX *const client_ctx, SSL **const ssl_h, BIO **const s_bio, const double timeout, double *const ssl_handshake)
 {
-	int dummy = -1;
 	double dstart = get_ts();
+	double end = get_ts() + timeout;
 
 	struct timeval tv;
 	tv.tv_sec  = (long)(timeout / 1000.0);
@@ -153,19 +213,61 @@ int connect_ssl(int fd, SSL_CTX *client_ctx, SSL **ssl_h, BIO **s_bio, double ti
 	*s_bio = BIO_new_socket(fd, BIO_NOCLOSE);
 	SSL_set_bio(*ssl_h, *s_bio, *s_bio);
 
-	dummy = SSL_connect(*ssl_h);
-	if (dummy <= 0)
+	if (set_fd_nonblocking(fd) == -1)
+		return RC_INVAL;
+
+	do
 	{
-		set_error(gettext("problem starting SSL connection: %d"), SSL_get_error(*ssl_h, dummy));
-		return -1;
+		int rc = SSL_connect(*ssl_h);
+
+		if (rc <= 0)
+		{
+			int err = SSL_get_error(*ssl_h, rc);
+
+			if (err == SSL_ERROR_WANT_CONNECT || err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
+			{
+				struct timeval tv;
+				fd_set fds;
+				double left = end - get_ts();
+
+				if (left <= 0)
+				{
+					set_error(gettext("Time-out during SSL handshake"));
+					return -1;
+				}
+
+				tv.tv_sec = left;
+				tv.tv_usec = (left - tv.tv_sec) * 1000000;
+
+				FD_ZERO(&fds);
+				FD_SET(fd, &fds);
+
+				if (err == SSL_ERROR_WANT_READ)
+					rc = select(fd + 1, &fds, NULL, NULL, &tv);
+				else
+					rc = select(fd + 1, NULL, &fds, NULL, &tv);
+			}
+			else
+			{
+				set_error(gettext("SSL handshake error: %s"), SSL_get_error(*ssl_h, err));
+				return -1;
+			}
+		}
 	}
+	while (!SSL_is_init_finished(*ssl_h) && !got_sigquit);
+
+	if (got_sigquit)
+		return -1;
 
 	*ssl_handshake = get_ts() - dstart;
+
+	if (set_fd_blocking(fd) == -1)
+		return -1;
 
 	return 0;
 }
 
-SSL_CTX * initialize_ctx(char ask_compression)
+SSL_CTX * initialize_ctx(const char ask_compression)
 {
 	const SSL_METHOD *meth = NULL;
 	SSL_CTX *ctx = NULL;
@@ -192,7 +294,7 @@ SSL_CTX * initialize_ctx(char ask_compression)
 	return ctx;
 }
 
-char * get_fingerprint(SSL *ssl_h)
+char * get_fingerprint(SSL *const ssl_h)
 {
 	char *string = NULL;
 
@@ -228,7 +330,7 @@ char * get_fingerprint(SSL *ssl_h)
 	return string;
 }
 
-int connect_ssl_proxy(int fd, struct addrinfo *ai, double timeout, const char *proxy_user, const char *proxy_password, const char *hostname, int portnr, char *tfo)
+int connect_ssl_proxy(const int fd, struct addrinfo *const ai, const double timeout, const char *const proxy_user, const char *const proxy_password, const char *const hostname, const int portnr, char *const tfo)
 {
 	int rc = -1;
 	char request_headers[4096] = { 0 };
@@ -239,19 +341,19 @@ int connect_ssl_proxy(int fd, struct addrinfo *ai, double timeout, const char *p
 	request_headers_len = snprintf(request_headers, sizeof request_headers, "CONNECT %s:%d HTTP/1.1\r\nUser-Agent: HTTPing v" VERSION \
 			"\r\nProxy-Connection: keep-alive\r\nConnection: keep-alive\r\nHost: %s\r\n", hostname, portnr, hostname);
 
-        if (proxy_user)
-        {
-                char ppa_string[256] = { 0 };
-                char b64_ppa_string[512] = { 0 };
+	if (proxy_user)
+	{
+		char ppa_string[256] = { 0 };
+		char b64_ppa_string[512] = { 0 };
 
-                sprintf(ppa_string, "%s:%s", proxy_user, proxy_password);
-                enc_b64(ppa_string, strlen(ppa_string), b64_ppa_string);
-                request_headers_len += snprintf(&request_headers[request_headers_len], sizeof request_headers - request_headers_len, "Proxy-Authorization: Basic %s\r\n", b64_ppa_string);
-        }
+		sprintf(ppa_string, "%s:%s", proxy_user, proxy_password);
+		enc_b64(ppa_string, strlen(ppa_string), b64_ppa_string);
+		request_headers_len += snprintf(&request_headers[request_headers_len], sizeof request_headers - request_headers_len, "Proxy-Authorization: Basic %s\r\n", b64_ppa_string);
+	}
 
 	request_headers_len += snprintf(&request_headers[request_headers_len], sizeof request_headers - request_headers_len, "\r\n");
 
-	if ((rc = connect_to(fd, ai, timeout, tfo, request_headers, request_headers_len, &rh_sent)) < 0)
+	if ((rc = connect_to(fd, ai, timeout, tfo, request_headers, request_headers_len, &rh_sent)) == -1)
 		return rc;
 
 	if (!rh_sent)

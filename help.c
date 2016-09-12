@@ -74,7 +74,7 @@ void new_version_alert(void)
 
 void version(void)
 {
-	fprintf(stderr, gettext("HTTPing v" VERSION ", (C) 2003-2013 folkert@vanheusden.com\n"));
+	fprintf(stderr, gettext("HTTPing v" VERSION ", (C) 2003-2016 folkert@vanheusden.com\n"));
 #ifndef NO_SSL
 	fprintf(stderr, gettext(" * SSL support included (-l)\n"));
 #endif
@@ -210,7 +210,7 @@ void usage(const char *me)
 	format_help(NULL, "--divert-connect", gettext("connect to a different host than in the URL given"));
 	format_help(NULL, "--keep-cookies", gettext("return the cookies given by the HTTP server in the following request(s)"));
 	format_help(NULL, "--no-host-header", gettext("do not add \"Host:\"-line to the request headers"));
-	format_help("-Q", "--persistent-connections", gettext("use a persistent connection. adds a 'C' to the output if httping had to reconnect"));
+	format_help("-Q", "--persistent-connections", gettext("use a persistent connection, i.e. reuse the same TCP connection for multiple HTTP requests. usually possible when 'Connection: Keep-Alive' is sent by server. adds a 'C' to the output if httping had to reconnect"));
 	format_help("-I x", "--user-agent", gettext("use 'x' for the UserAgent header"));
 	format_help("-R x", "--referer", gettext("use 'x' for the Referer header"));
 	format_help(NULL, "--header", gettext("adds an extra request-header"));
@@ -271,7 +271,7 @@ void usage(const char *me)
 	format_help("-q", "--quiet", gettext("quiet, only returncode"));
 	format_help("-m", "--parseable-output", gettext("give machine parseable output (see also -o and -e)"));
 	format_help("-M", NULL, gettext("json output, cannot be combined with -m"));
-	format_help("-o rc,rc,...", "--ok-result-codes", gettext("what http results codes indicate 'ok' comma seperated WITHOUT spaces inbetween default is 200, use with -e"));
+	format_help("-o rc,rc,...", "--ok-result-codes", gettext("what http results codes indicate 'ok' comma separated WITHOUT spaces inbetween default is 200, use with -e"));
 	format_help("-e x", "--result-string", gettext("string to display when http result code doesn't match"));
 	format_help("-n warn,crit", "--nagios-mode-1 / --nagios-mode-2", gettext("Nagios-mode: return 1 when avg. response time >= warn, 2 if >= crit, otherwhise return 0"));
 	format_help("-N x", NULL, gettext("Nagios mode 2: return 0 when all fine, 'x' when anything failes"));

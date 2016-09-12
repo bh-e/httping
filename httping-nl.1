@@ -1,11 +1,11 @@
-.\" Copyright Folkert van Heusden, 2003-2013
+.\" Copyright Folkert van Heusden, 2003-2016
 .\"
 .\" This file may be copied under the conditions described
 .\" in the GNU GENERAL PUBLIC LICENSE, version 2
 .\" that can be found on the website of the free software
 .\" foundation.
 .\"
-.TH HTTPING 1 2013-03 "httping"
+.TH HTTPING 1 2016-09 "httping"
 .SH NAME
 httping - meten van de latency en doorvoorsnelheid van een http server
 .SH SAMENVATTING
@@ -92,6 +92,9 @@ Selecteer de HTTP status-codes die als 'ok' beschouwd worden.
 .TP
 .B "\-p portnumber"
 Gebruik dit on combinatie met h. Het zet het port-nummer om te pingen.
+.TP
+.B "\-Q"
+Gebruik een blijvende verbinding, dat wil zeggen hergebruiken dezelfde TCP-verbinding voor meerdere HTTP-verzoeken. Meestal mogelijk wanneer 'Connection: Keep-Alive' is verzonden door de server. Als het bestemmingssysteem de verbinding verbroken heeft, dan zal HTTPing een \"C\" toevoegen aan de uitvoer.
 .TP
 .B "\-q"
 Geef geen uitvoer, alleen een teruggave code.
@@ -236,5 +239,5 @@ Geen.
 Deze man-page beschrijft
 .B httping
 versie 2.3: andere versies kunnen iets of wat verschillen.
-Stuur a.u.b. correcties, toevingen en foutraporten naar folkert@vanheusden.com
+Stuur a.u.b. correcties, toevingen en foutraporten naar mail@vanheusden.com
 Wanneer u een donatie wilt doen, dan kunt u Bitcoins sturen naar: 1N5Sn4jny4xVwTwSYLnf7WnFQEGoVRmTQF
